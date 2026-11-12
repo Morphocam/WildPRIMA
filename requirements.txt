@@ -26,3 +26,5 @@ matplotlib
 tqdm
 imageio-ffmpeg
 pytest
+gradio>=5.30,<6
+safetensors

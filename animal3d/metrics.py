@@ -1,10 +1,10 @@
-"""Measures how well reprojected meshes match the giraffes' measured image size.
+"""Measures how well reprojected meshes match the animals' measured image size.
 
 "Size" is measured against the detector's instance mask, not by eye:
   * silhouette IoU between the mesh's projection and the mask,
   * mesh/mask height, width and area ratios (1.0 = correct image size; area above 1 = too bulky),
-  * neck recall: fraction of the mask's top third covered by the mesh, which isolates the long neck
-    and head, the part a generic quadruped prior is most likely to get wrong.
+  * top recall: fraction of the mask's top third covered by the mesh. On a standing animal that is the
+    head, neck and back, where a wrong body plan shows first (on a giraffe it isolates the long neck).
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def mask_bbox(mask: np.ndarray) -> tuple[int, int, int, int] | None:
 
 def fit_metrics(mesh_mask: np.ndarray, det_mask: np.ndarray) -> dict:
     """Compare a mesh silhouette against a detector mask of the same image size."""
-    result = {"iou": 0.0, "height_ratio": np.nan, "width_ratio": np.nan, "area_ratio": np.nan, "neck_recall": np.nan}
+    result = {"iou": 0.0, "height_ratio": np.nan, "width_ratio": np.nan, "area_ratio": np.nan, "top_recall": np.nan}
     det_box = mask_bbox(det_mask)
     if det_box is None:
         return result
@@ -35,7 +35,7 @@ def fit_metrics(mesh_mask: np.ndarray, det_mask: np.ndarray) -> dict:
     x1, y1, x2, y2 = det_box
     top = det_mask.copy()
     top[y1 + (y2 - y1) // 3 :] = False
-    result["neck_recall"] = float(np.logical_and(mesh_mask, top).sum() / max(top.sum(), 1))
+    result["top_recall"] = float(np.logical_and(mesh_mask, top).sum() / max(top.sum(), 1))
 
     mesh_box = mask_bbox(mesh_mask)
     if mesh_box is not None:
@@ -45,7 +45,7 @@ def fit_metrics(mesh_mask: np.ndarray, det_mask: np.ndarray) -> dict:
 
 
 def scene_flags(boxes: np.ndarray, width: int, height: int, margin: float = 3.0) -> tuple[np.ndarray, np.ndarray]:
-    """Per box: touches the frame edge; overlaps another giraffe's box. Both invalidate the metrics."""
+    """Per box: touches the frame edge; overlaps another animal's box. Both invalidate the metrics."""
     truncated = (
         (boxes[:, 0] <= margin) | (boxes[:, 1] <= margin) | (boxes[:, 2] >= width - margin) | (boxes[:, 3] >= height - margin)
     )
@@ -69,7 +69,7 @@ def _aggregate(df: pd.DataFrame) -> dict:
         "height_ratio_median": float(df["height_ratio"].median()),
         "width_ratio_median": float(df["width_ratio"].median()),
         "area_ratio_median": float(df["area_ratio"].median()),
-        "neck_recall_median": float(df["neck_recall"].median()),
+        "top_recall_median": float(df["top_recall"].median()),
         "frac_height_within_15pct": float(((df["height_ratio"] - 1).abs() <= 0.15).mean()),
     }
 
@@ -79,9 +79,9 @@ def summarize(df: pd.DataFrame, frames_total: int, min_track_len: int = 10) -> d
     clean = df[~df["truncated"] & ~df["overlapping"]]
     summary: dict = {
         "frames_processed": frames_total,
-        "frames_with_giraffe": int(df["frame"].nunique()),
-        "giraffe_instances": int(len(df)),
-        "max_giraffes_in_one_frame": int(df.groupby("frame").size().max()) if len(df) else 0,
+        "frames_with_animal": int(df["frame"].nunique()),
+        "animal_instances": int(len(df)),
+        "max_animals_in_one_frame": int(df.groupby("frame").size().max()) if len(df) else 0,
         "tracks": int(df["track_id"].nunique()),
         "all": _aggregate(df),
         "clean": _aggregate(clean),
@@ -114,7 +114,7 @@ def summarize(df: pd.DataFrame, frames_total: int, min_track_len: int = 10) -> d
 
 
 def plot_summary(df: pd.DataFrame, path: str) -> None:
-    """Single-measure panels against the same x axis: giraffe height in the image."""
+    """Single-measure panels against the same x axis: animal height in the image."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -126,7 +126,7 @@ def plot_summary(df: pd.DataFrame, path: str) -> None:
         ("iou", "Silhouette IoU with detector mask", (0, 1), None),
         ("height_ratio", "Mesh height / mask height", (0.4, 2.0), 1.0),
         ("area_ratio", "Mesh area / mask area", (0.4, 2.0), 1.0),
-        ("neck_recall", "Neck recall (mask top third)", (0, 1), None),
+        ("top_recall", "Top recall (mask top third)", (0, 1), None),
     ]
     fig, axes = plt.subplots(1, 4, figsize=(16, 3.8), facecolor=surface)
     for ax, (column, title, ylim, reference) in zip(axes, panels):
@@ -136,7 +136,7 @@ def plot_summary(df: pd.DataFrame, path: str) -> None:
             ax.axhline(reference, color=muted, linewidth=1, linestyle=(0, (4, 3)))
         ax.set_ylim(*ylim)
         ax.set_title(title, loc="left", fontsize=11, color=ink)
-        ax.set_xlabel("Giraffe height in image (px)", fontsize=9, color=muted)
+        ax.set_xlabel("Animal height in image (px)", fontsize=9, color=muted)
         ax.tick_params(colors=muted, labelsize=8, length=0)
         ax.grid(axis="y", color=grid, linewidth=0.8)
         ax.set_axisbelow(True)

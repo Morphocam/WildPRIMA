@@ -1,0 +1,3 @@
+AniMer (Lyu et al., CVPR 2025). Code: Hugging Face Space luoxue-star/AniMer (commit 935680d, matches the released
+checkpoint; the GitHub main branch does not). Checkpoint: huggingface.co/luoxue-star/AniMer checkpoint.ckpt.
+Loaded by third_party/animer_loader.py (pytorch3d stubbed: only used in AniMer's training losses).

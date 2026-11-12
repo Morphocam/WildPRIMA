@@ -1,0 +1,5 @@
+WildPRIMA code: MIT licence (LICENSE).
+Model weights (Hugging Face): derived from PRIMA, academic non-commercial use only (PRIMA licence).
+PRIMA (https://github.com/AdaptiveMotorControlLab/PRIMA) is cloned by setup_env.sh under its own licence.
+SMAL model files are licensed by the Max Planck Institute and are not redistributed here.
+Detectron2 Mask R-CNN weights are downloaded at run time under their own licence.

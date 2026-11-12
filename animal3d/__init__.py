@@ -1,4 +1,4 @@
-"""Multi-giraffe 3D mesh recovery from video using PRIMA."""
+"""3D body recovery for any quadruped, from images, video or RGB + LiDAR, using PRIMA."""
 import os
 
 # Must be set before pyrender is first imported.

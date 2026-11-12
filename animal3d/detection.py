@@ -1,8 +1,11 @@
-"""Giraffe detection with instance masks.
+"""Animal detection with instance masks, for any species.
 
-PRIMA's own demos cannot be used as-is here: ``prima.utils.detection.ANIMAL_COCO_IDS`` omits
-COCO class 23 (giraffe), so they silently discard every correctly classified giraffe. They also
-use Faster R-CNN; Mask R-CNN (same backbone) additionally gives us masks to score mesh fit against.
+COCO has no class for most WildDepth species (rhino, lion, tiger, wildebeest, steenbok, goat, donkey). The
+detector still fires on them, under the nearest class it knows, and that label is often wrong: a rhino may be
+a "cow" or "elephant". So every mammal class counts as "animal" and the class label is not trusted.
+
+PRIMA's own filter omits elephant and giraffe (``prima.utils.detection.ANIMAL_COCO_IDS``), which is why
+it drops almost every giraffe. It also uses Faster R-CNN; Mask R-CNN (same backbone) adds masks to fit to.
 """
 from __future__ import annotations
 
@@ -10,7 +13,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-GIRAFFE_COCO_ID = 23
+# Detectron2's contiguous COCO ids.
+COCO_ANIMALS = {15: "cat", 16: "dog", 17: "horse", 18: "sheep", 19: "cow", 20: "elephant", 21: "bear", 22: "zebra", 23: "giraffe"}
 STOCK_PRIMA_ANIMAL_IDS = (15, 16, 17, 18, 19, 21, 22)
 
 _CONFIG = "COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml"
@@ -21,12 +25,13 @@ class Detections:
     boxes: np.ndarray  # (N, 4) xyxy
     scores: np.ndarray  # (N,)
     masks: np.ndarray  # (N, H, W) bool
+    classes: np.ndarray  # (N,) COCO ids, as a hint only
 
     def __len__(self) -> int:
         return len(self.boxes)
 
     def select(self, idx) -> "Detections":
-        return Detections(self.boxes[idx], self.scores[idx], self.masks[idx])
+        return Detections(self.boxes[idx], self.scores[idx], self.masks[idx], self.classes[idx])
 
 
 def dedupe_by_mask(
@@ -37,8 +42,8 @@ def dedupe_by_mask(
 ) -> np.ndarray:
     """Indices to keep, highest score first, removing duplicate/partial instance detections.
 
-    Compares masks rather than boxes because a distant giraffe can sit entirely inside a near
-    giraffe's box, which box-containment suppression (as in PRIMA's demo) would wrongly remove.
+    Also removes one animal detected under two classes. Compares masks rather than boxes because a distant
+    animal can sit entirely inside a near animal's box, which box suppression would wrongly remove.
     """
     flat = masks.reshape(len(masks), -1)
     areas = flat.sum(axis=1)
@@ -58,7 +63,7 @@ def dedupe_by_mask(
     return np.array(keep, dtype=np.int64)
 
 
-class GiraffeDetector:
+class AnimalDetector:
     def __init__(self, score_threshold: float = 0.5, device: str = "cuda"):
         import detectron2.config
         import detectron2.engine
@@ -74,17 +79,18 @@ class GiraffeDetector:
         self.score_threshold = score_threshold
 
     def __call__(self, frame_bgr: np.ndarray) -> tuple[Detections, int]:
-        """Return giraffe detections and how many boxes PRIMA's stock filter would have kept."""
+        """Return animal detections and how many boxes PRIMA's stock filter would have kept."""
         inst = self.predictor(frame_bgr)["instances"].to("cpu")
         classes = inst.pred_classes.numpy()
         scores = inst.scores.numpy()
         stock_hits = int((np.isin(classes, STOCK_PRIMA_ANIMAL_IDS) & (scores > 0.7)).sum())
 
-        idx = np.where((classes == GIRAFFE_COCO_ID) & (scores >= self.score_threshold))[0]
+        idx = np.where(np.isin(classes, list(COCO_ANIMALS)) & (scores >= self.score_threshold))[0]
         dets = Detections(
             inst.pred_boxes.tensor.numpy()[idx].astype(np.float32),
             scores[idx],
             inst.pred_masks.numpy()[idx],
+            classes[idx],
         )
         if len(dets) > 1:
             dets = dets.select(dedupe_by_mask(dets.scores, dets.masks))

@@ -40,9 +40,11 @@ class FrameRenderer:
     with any other, which then crashes.
     """
 
-    def __init__(self, width: int, height: int, focal: float, faces: np.ndarray):
+    def __init__(self, width: int, height: int, camera, faces: np.ndarray):
+        """`camera` has fx, fy, cx, cy in pixels."""
         self.renderer = pyrender.OffscreenRenderer(width, height)
-        self.camera = pyrender.IntrinsicsCamera(fx=focal, fy=focal, cx=width / 2.0, cy=height / 2.0, zfar=1e6)
+        self.camera = pyrender.IntrinsicsCamera(fx=camera.fx, fy=camera.fy, cx=camera.cx, cy=camera.cy, zfar=1e6)
+        self.intrinsics = camera
         self.faces = faces
 
     def silhouette(self, vertices: np.ndarray, cam_t: np.ndarray) -> np.ndarray:
@@ -59,7 +61,7 @@ class FrameRenderer:
         return self.renderer.render(scene, flags=pyrender.RenderFlags.DEPTH_ONLY)
 
     def overlay(self, frame_rgb: np.ndarray, vertices, cam_ts, colors, alpha: float = 0.8) -> np.ndarray:
-        """Composite all meshes in one scene, so giraffes occlude one another correctly."""
+        """Composite all meshes in one scene, so animals occlude one another correctly."""
         if len(vertices) == 0:
             return frame_rgb.copy()
         scene = pyrender.Scene(ambient_light=(0.35, 0.35, 0.35), bg_color=(0, 0, 0, 0))
@@ -102,7 +104,7 @@ class ProfileRenderer:
 
 
 def export_mesh(path, vertices: np.ndarray, cam_t: np.ndarray, faces: np.ndarray, color) -> None:
-    """Write an OBJ in camera coordinates, keeping each giraffe's placement in the scene."""
+    """Write an OBJ in camera coordinates, keeping each animal's placement in the scene."""
     rgba = np.array([*color, 1.0])
     mesh = trimesh.Trimesh(camera_space(vertices, cam_t), faces, vertex_colors=np.tile(rgba, (len(vertices), 1)), process=False)
     mesh.export(path)

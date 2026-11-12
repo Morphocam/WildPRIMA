@@ -1,6 +1,6 @@
-"""Small constant-velocity tracker giving each giraffe a stable ID across frames.
+"""Small constant-velocity tracker giving each animal a stable ID across frames.
 
-The camera is fixed, but giraffes move far between frames at this video's ~10 fps, so plain IoU is
+Animals can move far between frames at this video's ~10 fps, so plain IoU is
 not enough: matching also accepts boxes whose centres are close relative to the box size.
 """
 from __future__ import annotations
