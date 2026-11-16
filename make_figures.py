@@ -27,7 +27,9 @@ from pose_prior import NEW, ROOT, run_folders
 
 OUT = NEW / "figures"
 TEASER = [("giraffe_4_lidar", "Giraffe"), ("Rhino_3_lidar", "White rhinoceros"),
-          ("Camel_1_domes", "Bactrian camel"), ("Ankle_cow_5_lidar", "Ankole-Watusi cattle")]
+          ("Camel_1_domes", "Bactrian camel"), ("Ankle_cow_2_horns", "Ankole-Watusi cattle")]
+# Figure-only runs that are not training clips in pose_prior.EXISTING: name -> (input folder, calibration).
+FIGURE_RUNS = {"Ankle_cow_2_horns": ("input_30s/Ankle_cow_2_rgbd", "auto")}
 # Rows chosen by eye from contact sheets, where the automatic choice was occluded or front-on (all camels face the camera).
 PINNED = {"Rhino_3_lidar": 105, "Camel_1_domes": 394}
 PRIMA_COLOR = (0.55, 0.64, 0.80)
@@ -141,6 +143,7 @@ def teaser() -> None:
     target = OUT / "teaser"
     target.mkdir(parents=True, exist_ok=True)
     runs = run_folders()
+    runs.update({name: (ROOT / "outputs" / name, ROOT / inp, calib) for name, (inp, calib) in FIGURE_RUNS.items()})
     rows, choice = [], {}
     for name, title in TEASER:
         out, inp, calib = runs[name]

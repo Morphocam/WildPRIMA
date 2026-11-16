@@ -3,6 +3,9 @@
 Metric 3D quadrupeds from wild video and single images: an extended SMAL body (bone scales, horns, humps) fitted per
 clip with LiDAR, and a feed-forward student distilled from those fits (weights: Hugging Face, `wildprima-student-0.1.0`).
 
+![WildPRIMA teaser](assets/teaser.jpg)
+*PRIMA (blue) against WildPRIMA (orange) on WildDepth giraffe, white rhinoceros, Bactrian camel and Ankole-Watusi cattle; numbers are silhouette IoU.*
+
 ```bash
 bash setup_env.sh && conda activate prima
 python predict.py photo.jpg --weights <hf user>/wildprima-student --out predictions/   # single image, student

@@ -24,6 +24,8 @@ import torch
 ROOT = Path(__file__).resolve().parent
 NEW = ROOT / "new_output"
 FORMAT = "wildprima-student/1"
+TEASER = ROOT / "paper" / "fig" / "teaser.jpg"  # rendered by `python make_figures.py teaser`
+TEASER_CAPTION = "PRIMA (blue) against WildPRIMA (orange) on WildDepth giraffe, white rhinoceros, Bactrian camel and Ankole-Watusi cattle; numbers are silhouette IoU."
 CODE = ["animal3d", "tests", "docs", "assets", "run.py", "student.py", "student_eval.py", "pose_prior.py", "kinematics.py",
         "make_labels.py", "make_figures.py", "paper_results.py", "predict.py", "export_release.py", "app.py", "run_step4.sh",
         "setup_env.sh", "requirements.txt", "student_refine.py", "baseline_animer.py", "sizes.py", "click_keypoints.py",
@@ -168,6 +170,9 @@ base_model: PRIMA
 
 # WildPRIMA student ({config['version']})
 
+![WildPRIMA teaser](teaser.jpg)
+*{TEASER_CAPTION}*
+
 Single-image, metric 3D reconstruction of quadrupeds. The model predicts SMAL pose and shape, 13 bone-group length and
 thickness scales (an extended body that can express long necks and legs, unlike SMAL's shape space), and the animal's
 metres per model unit, which with the camera intrinsics gives its distance and size in metres.
@@ -296,6 +301,7 @@ def huggingface(out: Path, args) -> dict:
                      (NEW / "gait_all_tracks.csv", "gait_all_tracks.csv")):
         if src.exists():
             shutil.copy2(src, out / "results" / dst)
+    shutil.copy2(TEASER, out / "teaser.jpg")
     (out / "README.md").write_text(model_card(config, summary, prior_log))
     shutil.copy2(ROOT / "third_party" / "PRIMA" / "LICENSE.md", out / "LICENSE")
     with open(out / "LICENSE", "a") as f:
@@ -318,6 +324,7 @@ def github(out: Path, config: dict) -> None:
         elif src.exists():
             (out / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, out / name)
+    shutil.copy2(TEASER, out / "assets" / "teaser.jpg")
     shutil.copy2(ROOT / "LICENSE", out / "LICENSE")
     (out / "NOTICE").write_text(
         "WildPRIMA code: MIT licence (LICENSE).\n"
@@ -331,6 +338,9 @@ def github(out: Path, config: dict) -> None:
 
 Metric 3D quadrupeds from wild video and single images: an extended SMAL body (bone scales, horns, humps) fitted per
 clip with LiDAR, and a feed-forward student distilled from those fits (weights: Hugging Face, `{config['name']}`).
+
+![WildPRIMA teaser](assets/teaser.jpg)
+*{TEASER_CAPTION}*
 
 ```bash
 bash setup_env.sh && conda activate prima
